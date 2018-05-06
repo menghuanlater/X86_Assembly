@@ -1,0 +1,77 @@
+STACK1      SEGMENT PARA STACK
+STACK_AREA  DW  100H DUP(?)
+STACK_BTM   EQU $-STACK_AREA
+STACK1      ENDS
+
+DATA1       SEGMENT PARA
+CopeStr		DB		'However long the night,the dawn will break!',00H
+DATA1       ENDS
+
+CODE1		SEGMENT PARA
+			ASSUME 			CS:CODE1,	DS:DATA1,	SS:STACK1
+			
+MAIN		PROC	FAR
+
+			MOV		AX,DATA1
+			MOV		DS,AX
+			MOV		AX,STACK1
+			MOV		SS,AX
+			MOV		SP,STACK_BTM
+			
+			MOV		SI,OFFSET	CopeStr
+			SUB		SI,1
+MyLoop:	
+			INC		SI
+			MOV		AL,BYTE	PTR [SI]
+			CMP		AL,0
+			JZ		LOOP_EXIT
+			CMP		AL,'a'
+			JB		MyLoop
+			CMP		AL,'z'
+			JG		MyLoop
+			SUB		AL,20H
+			MOV		BYTE PTR[SI],AL
+			JMP		MyLoop
+			
+LOOP_EXIT:
+			MOV			SI,OFFSET	CopeStr
+			CALL		DISPLAY
+			CALL		NEWLINE
+			;结束
+			MOV			AX,4C00H
+			INT			21H		
+MAIN		ENDP	
+
+
+;打印一个字符串
+DISPLAY		PROC
+			PUSH		DX		
+			;字符串首地址SI中
+			CLD
+WHILE_LOOP:
+			LODSB
+			CMP			AL,0
+			JZ			WHILE_EXIT
+			MOV			DL,AL
+			MOV			AH,2
+			INT			21H
+			JMP			WHILE_LOOP
+
+WHILE_EXIT:
+			POP			DX
+			RET
+DISPLAY		ENDP
+
+;输出换行与回车符
+NEWLINE		PROC
+			MOV			DL,0DH
+			MOV			AH,2
+			INT			21H
+			MOV			DL,0AH
+			MOV			AH,2
+			INT			21H
+			RET
+NEWLINE		ENDP		
+			
+CODE1		ENDS
+			END			MAIN
