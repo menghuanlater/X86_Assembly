@@ -32,19 +32,19 @@ MAIN		PROC		FAR
 			
 			;初始化函数指针表
 			MOV			SI,OFFSET	FuncArr
-			MOV			AX,OFFSET	HEX_TO_DEC
+			MOV			AX,OFFSET	H_HEX_TO_DEC
 			MOV			[SI],AX
 			
-			MOV			AX,OFFSET	DEC_TO_HEX
+			MOV			AX,OFFSET	H_DEC_TO_HEX
 			MOV			[SI+2],AX
 			
-			MOV			AX,OFFSET	BIN_TO_DEC
+			MOV			AX,OFFSET	H_BIN_TO_DEC
 			MOV			[SI+4],AX
 			
-			MOV			AX,OFFSET	MULTIPLY
+			MOV			AX,OFFSET	H_MULTIPLY
 			MOV			[SI+6],AX
 			
-			MOV			AX,OFFSET	DIVIDE
+			MOV			AX,OFFSET	H_DIVIDE
 			MOV			[SI+8],AX
 			
 			;使用一个while循环接受键盘的输入,如果是0,则退出
@@ -84,7 +84,6 @@ GETDECNUM		PROC
 			PUSH		CX
 			MOV			SI,0
 			MOV			BX,10
-			MOV			DX,0
 GETDECNUM_LOOP:
 			MOV			AH,1
 			INT			21H
@@ -107,11 +106,10 @@ GETDECNUM_EXIT:
 GETDECNUM	ENDP
 
 ;乘
-MULTIPLY	PROC
+H_MULTIPLY	PROC
 			;压栈
 			PUSH		BX
 			PUSH		SI
-			
 			;读取第一个乘数
 			MOV			SI,OFFSET	InfoMulDiv1
 			CALL		DISPLAY
@@ -120,7 +118,24 @@ MULTIPLY	PROC
 			MOV			SI,OFFSET	InfoMulDiv2
 			CALL		DISPLAY
 			CALL		GETDECNUM
+			PUSH		AX
+			CALL		MULTIPLY
+			;弹栈
+			POP			SI
 			POP			BX
+			RET
+H_MULTIPLY	ENDP
+
+MULTIPLY	PROC
+			;压栈
+			PUSH		BP
+			MOV			BP,SP
+			PUSH		BX
+			PUSH		SI
+			
+			;读取第一个乘数
+			MOV			AX,[BP+4]
+			MOV			BX,[BP+6]
 			MUL			BX
 			PUSH		AX;堆栈传参
 			
@@ -131,16 +146,17 @@ MULTIPLY	PROC
 			;弹栈
 			POP			SI
 			POP			BX
-			RET
+			POP			BP
+			RET			4
 MULTIPLY	ENDP
 
 ;除
-DIVIDE		PROC
+H_DIVIDE	PROC
 			PUSH		BX
 			PUSH		SI
 			PUSH		DX
 			MOV			DX,0
-			MOV			BX,0
+			
 			MOV			SI,OFFSET	InfoMulDiv1
 			CALL		DISPLAY
 			CALL		GETDECNUM
@@ -148,31 +164,59 @@ DIVIDE		PROC
 			MOV			SI,OFFSET	InfoMulDiv2
 			CALL		DISPLAY
 			CALL		GETDECNUM
+			PUSH		AX
+			CALL		DIVIDE
+			
+			POP			DX
+			POP			SI
 			POP			BX
-			XCHG		AX,BX
+			RET
+H_DIVIDE	ENDP
+
+DIVIDE		PROC
+			PUSH		BP
+			MOV			BP,SP
+			PUSH		BX
+			PUSH		SI
+			
+			MOV			AX,[BP+6]
+			MOV			BX,[BP+4]
+			
 			DIV			BX
-			PUSH		AX;堆栈传参
+			PUSH		AX
 			
 			MOV			SI,OFFSET	InfoOutcome
 			CALL		DISPLAY
 			CALL		DECOUTPRINT
 			CALL		NEWLINE
 			
-			POP			DX
 			POP			SI
-			POP			BX
-			RET
+			POP			BP
+			RET			4
 DIVIDE		ENDP
 
 ;十进制->十六进制
-DEC_TO_HEX	PROC
+H_DEC_TO_HEX	PROC
 			PUSH		SI
-			PUSH		BX
-			PUSH		CX
+			
 			MOV			SI,OFFSET	InfoDecToHex
 			CALL		DISPLAY
 			CALL		GETDECNUM
-			MOV			BX,AX
+			PUSH		AX
+			CALL		DEC_TO_HEX
+			
+			POP			SI
+			RET
+H_DEC_TO_HEX	ENDP
+
+DEC_TO_HEX	PROC
+			PUSH		BP
+			MOV			BP,SP
+			PUSH		SI
+			PUSH		BX
+			PUSH		CX
+			
+			MOV			BX,[BP+4]
 			
 			MOV			SI,OFFSET	InfoOutcome
 			CALL		DISPLAY
@@ -200,11 +244,12 @@ DEC_TO_HEX	PROC
 			POP			CX
 			POP			BX
 			POP			SI
-			RET
+			POP			BP
+			RET			2
 DEC_TO_HEX	ENDP
 
 ;十六进制->十进制
-HEX_TO_DEC	PROC
+H_HEX_TO_DEC	PROC
 			;压栈
 			PUSH		SI
 			PUSH		BX
@@ -238,25 +283,40 @@ MULADD:
 GETHEXEXIT:
 			;十六进制数已经读取,值在SI中
 			PUSH		SI
+			CALL		HEX_TO_DEC
+			;弹栈
+			POP			DX
+			POP			CX
+			POP			BX
+			POP			SI
+			RET
+H_HEX_TO_DEC	ENDP
+
+HEX_TO_DEC	PROC
+			PUSH		BP
+			MOV			BP,SP
+			PUSH		SI
+			
+			MOV			SI,[BP+4]
+			PUSH		SI
 			MOV			SI,OFFSET	InfoOutcome
 			CALL		DISPLAY
 			CALL		DECOUTPRINT
 			CALL		NEWLINE
 			
 			;弹栈
-			POP         DX
-			POP			CX
-			POP			BX
 			POP			SI
-			RET
+			POP			BP
+			RET			2
 HEX_TO_DEC	ENDP
 
 ;二进制->十进制
-BIN_TO_DEC	PROC
+H_BIN_TO_DEC	PROC
 			PUSH		SI
 			PUSH		BX
 			PUSH		CX
 			PUSH		DX
+			
 			MOV			SI,OFFSET	InfoBinToDec
 			CALL		DISPLAY
 			
@@ -278,16 +338,30 @@ GETBINLOOP:
 			JMP			GETBINLOOP
 GETBINEXIT:
 			PUSH		SI
+			CALL		BIN_TO_DEC
+			POP         DX
+			POP			CX
+			POP			BX
+			POP			SI
+			RET
+H_BIN_TO_DEC	ENDP
+
+BIN_TO_DEC	PROC
+			PUSH		BP
+			MOV			BP,SP
+			PUSH		SI
+			
+			MOV			SI,[BP+4]
+			PUSH		SI
+			
 			MOV			SI,OFFSET	InfoOutcome
 			CALL		DISPLAY
 			CALL		DECOUTPRINT
 			CALL		NEWLINE
 			
-			POP			DX
-			POP			CX
-			POP			BX
 			POP			SI
-			RET
+			POP			BP
+			RET			2
 BIN_TO_DEC	ENDP
 
 ;十六进制字符输出
